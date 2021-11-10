@@ -2,41 +2,12 @@ from pyArango.theExceptions import *
 from pyArango.connection import *
 from pyArango.graph import *
 from pyArango.collection import *
-from arango_schema import *
+# from arango_schema import *
 from typing import *
 
 
-def init_database(conn: Connection, name: str) -> Database:
-    if conn.hasDatabase(name=name) is False:
-        conn.createDatabase(name=name)
-    return conn[name]
-
-
-def init_collection(database: Database, name: str, class_name: str, geo_index: bool):
-    if database.hasCollection(name) is False:
-        database.createCollection(className=class_name, name=name)
-    if geo_index:
-        ensureGeoJsonIndex(database[name], fields=['geo_location'], name='geo_location', geoJson=True)
-    return database[name]
-
-
-def init_edges(database: Database, name: str, class_name: str) -> Edges:
-    if database.hasCollection(name) is False:
-        database.createCollection(className=class_name, name=name)
-    return database[name]
-
-
-def init_graph(database: Database, class_name: str):
-    if database.hasGraph(class_name) is False:
-        database.createGraph(class_name)
-    return database.graphs[class_name]
-
-
-def process_query(database: Database, aql: str, raw_results: bool = True, batch_size: int = 100) -> List[dict]:
-    result = database.AQLQuery(aql, rawResults=raw_results, batchSize=batch_size)
-    result_set = result.response['result']
-    while result.response['hasMore']:
-        result_set.append(database.AQLQuery(aql, rawResults=True).response['result'])
+def process_query(database: Database, aql: str, raw_results: bool = True, batch_size: int = 1) -> List[dict]:
+    result_set = database.fetch_list(aql)
     return result_set
 
 
@@ -47,17 +18,9 @@ def get_top_payment_totals(database: Database, n: int = 100, min_time: int = 0, 
     let payment_total = SUM(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{from, to, payment_total}}"""
-    totals = process_query(database, aql)
+    return {{from: from, to: to, payment_total: payment_total}}"""
+    totals = database.fetch_list(aql)
     return totals
-
-
-def update_daily_balances(database: Database, balances_data: List[dict]):
-    for doc in balances_data:
-        aql = f"""upsert {{_key: '{doc['_key']}'}}
-        insert {doc}
-        update {{ daily_balances: append(OLD.daily_balances, {doc['daily_balances']}) }} in balances"""
-        database.AQLQuery(aql)
 
 
 def get_top_payment_counts(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
@@ -67,32 +30,109 @@ def get_top_payment_counts(database: Database, n: int = 100, min_time: int = 0, 
     let payment_count = LENGTH(payment_groups)
     sort payment_count desc
     limit {n}
-    return {{from, to, payment_count}}"""
-    counts = process_query(database, aql)
+    return {{from: from, to: to, payment_count: payment_count}}"""
+    counts = database.fetch_list(aql)
     return counts
 
 
-def get_top_flows_from_accounts(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+def get_top_payers(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
     aql = f"""for payment in payments
     filter payment.time > {min_time} and payment.time < {max_time}
     collect from = payment._from into payment_groups = payment.amount
     let payment_total = SUM(payment_groups)
+    let payment_count = LENGTH(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{from, payment_total}}"""
-    totals = process_query(database, aql)
+    return {{from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    totals = database.fetch_list(aql)
     return totals
 
 
-def get_top_flows_to_accounts(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+def get_top_payees(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
     aql = f"""for payment in payments
     filter payment.time > {min_time} and payment.time < {max_time}
     collect to = payment._to into payment_groups = payment.amount
     let payment_total = SUM(payment_groups)
+    let payment_count = SUM(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{to, payment_total}}"""
-    totals = process_query(database, aql)
+    return {{to: last(split(to,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    totals = database.fetch_list(aql)
     return totals
 
+
+def get_top_payers_to_payee(database: Database, address: str, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    aql = f"""for payment in payments
+    filter payment.time > {min_time} and payment.time < {max_time} and payment._to == 'accounts/{address}'
+    collect from = payment._from into payment_groups = payment.amount
+    let payment_total = SUM(payment_groups)
+    let payment_count = LENGTH(payment_groups)
+    sort payment_total desc
+    limit {n}
+    return {{from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    totals = database.fetch_list(aql)
+    return totals
+
+
+def get_top_payees_from_payer(database: Database, address: str, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    aql = f"""for payment in payments
+    filter payment.time > {min_time} and payment.time < {max_time} and payment._from == 'accounts/{address}'
+    collect to = payment._to into payment_groups = payment.amount
+    let payment_total = SUM(payment_groups)
+    let payment_count = LENGTH(payment_groups)
+    sort payment_total desc
+    limit {n}
+    return {{to: last(split(to,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    totals = database.fetch_list(aql)
+    return totals
+
+
+def get_graph_to_top_payees(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    top_accounts = get_top_payees(database, n, min_time, max_time)
+    node_addresses = []
+    nodes = []
+    for node in top_accounts:
+        address = node['to']
+        node_addresses.append(address)
+        nodes.append(database['accounts'][address].getStore())
+    aql = f"""for account in accounts
+    filter account._key in {[node['_key'] for node in nodes]}
+    for v, e, p in 1..1 inbound account payments
+        collect from = e._from, to = e._to into edge_groups = e.amount
+        let payment_total = sum(edge_groups)
+        let payment_count = length(edge_groups)
+        sort payment_total desc
+        return {{to: last(split(to,'/')), from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    edges = database.fetch_list(aql)
+    for edge in edges:
+        from_address = edge['from']
+        if from_address not in node_addresses:
+            nodes.append(database['accounts'][from_address].getStore())
+            node_addresses.append(from_address)
+    return nodes, edges
+
+
+def get_graph_from_top_payers(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    top_accounts = get_top_payers(database, n, min_time, max_time)
+    node_addresses = []
+    nodes = []
+    for node in top_accounts:
+        address = node['from']
+        node_addresses.append(address)
+        nodes.append(database['accounts'][address].getStore())
+    aql = f"""for account in accounts
+    filter account._key in {[node['_key'] for node in nodes]}
+    for v, e, p in 1..1 outbound account payments
+        collect from = e._from, to = e._to into edge_groups = e.amount
+        let payment_total = sum(edge_groups)
+        let payment_count = length(edge_groups)
+        sort payment_total desc
+        return {{to: last(split(to,'/')), from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    edges = database.fetch_list(aql)
+    for edge in edges:
+        to_address = edge['to']
+        if to_address not in node_addresses:
+            nodes.append(database['accounts'][to_address].getStore())
+            node_addresses.append(to_address)
+    return nodes, edges
 
