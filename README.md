@@ -1,7 +1,7 @@
 # helium-arango-http
 ![build image](https://github.com/evandiewald/helium-arango-http/actions/workflows/docker-image.yml/badge.svg)
 ![publish image](https://github.com/evandiewald/helium-arango-http/actions/workflows/docker-publish.yml/badge.svg)
-![Python tests](https://github.com/evandiewald/helium-arango-http/actions/workflows/python-app.yml/badge.svg)
+![Python tests](https://github.com/evandiewald/helium-arango-http/actions/workflows/python-tests.yml/badge.svg)
 
 A RESTful API providing routes for blockchain data stored in a native graph database, which is populated by [`helium-arango-etl`](https://github.com/evandiewald/helium-arango-etl).
 
@@ -33,7 +33,7 @@ To run helium-arango-http, you will need:
 - [`evandiewald/helium-arango-analysis`](https://github.com/evandiewald/helium-arango-analysis): (coming soon) methods and models for running Graph Theory- and Graph Neural Network-based analyses of the Arango graphs using Python-friendly formats, such as networkx and torch-geometric.
 
 ## Contributing
-Pull requests are welcome, especially when it comes to adding additional interesting queries. The focus of this project is to leverage the native graph format of ArangoDB to run analyses that are *not already covered by the [Blockchain API](https://docs.helium.com/api)*, such as token flow and coverage mapping. If you are not familiar with ArangoDB, the [AQL query language](https://www.arangodb.com/docs/stable/aql/) allows for powerful extraction of *adjacencies* in the dataset. Build AQL queries in `api/arango_queries.py` and add routes to the FastAPI server in `api/server.py`.
+Pull requests are welcome, especially when it comes to adding additional interesting queries. The focus of this project is to leverage the native graph format of ArangoDB to run analyses that are *not already covered by the [Blockchain API](https://docs.helium.com/api)*, such as token flow and coverage mapping. If you are not familiar with ArangoDB, the [AQL query language](https://www.arangodb.com/docs/stable/aql/) allows for powerful extraction of *adjacencies* in the dataset. Build AQL queries in [`helium_arango_http/arango_queries.py`](helium_arango_http/arango_queries.py) and add routes to the FastAPI server in [`helium_arango_http/server.py`](helium_arango_http/arango_queries.py).
 
 ## Acknowledgements
 This project is supported by a grant from the [Decentralized Wireless Alliance](https://dewi.org).

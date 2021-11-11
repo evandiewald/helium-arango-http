@@ -8,11 +8,9 @@ from typing import Optional
 import uvicorn
 import h3
 from datetime import datetime
-import logging
 
 
 load_dotenv()
-logging.basicConfig(filename='../logs/server.log', level=logging.INFO)
 
 conn = Connection(
     arangoURL=os.getenv('ARANGO_URL'),

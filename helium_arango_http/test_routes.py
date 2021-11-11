@@ -1,6 +1,5 @@
 from fastapi.testclient import TestClient
-from api.server import app
-from api import arango_queries
+from server import app
 
 
 TEST_ACCOUNT = '13aSUnDYLkJRWBPSwqFPDvbZ9pvF9g5KByq7msrbGTeE9EezsZB'
