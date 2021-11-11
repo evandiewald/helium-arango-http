@@ -1,6 +1,7 @@
 # helium-arango-http
 ![build image](https://github.com/evandiewald/helium-arango-http/actions/workflows/docker-image.yml/badge.svg)
 ![publish image](https://github.com/evandiewald/helium-arango-http/actions/workflows/docker-publish.yml/badge.svg)
+![Python tests](https://github.com/evandiewald/helium-arango-http/actions/workflows/python-app.yml/badge.svg)
 
 A RESTful API providing routes for blockchain data stored in a native graph database, which is populated by [`helium-arango-etl`](https://github.com/evandiewald/helium-arango-etl).
 
