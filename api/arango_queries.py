@@ -1,14 +1,5 @@
-from pyArango.theExceptions import *
 from pyArango.connection import *
-from pyArango.graph import *
-from pyArango.collection import *
-# from arango_schema import *
-from typing import *
-
-
-def process_query(database: Database, aql: str, raw_results: bool = True, batch_size: int = 1) -> List[dict]:
-    result_set = database.fetch_list(aql)
-    return result_set
+import h3
 
 
 def get_top_payment_totals(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
@@ -18,7 +9,7 @@ def get_top_payment_totals(database: Database, n: int = 100, min_time: int = 0, 
     let payment_total = SUM(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{from: from, to: to, payment_total: payment_total}}"""
+    return {{from: last(split(from,'/')), to: last(split(to,'/')), payment_total: payment_total}}"""
     totals = database.fetch_list(aql)
     return totals
 
@@ -30,7 +21,7 @@ def get_top_payment_counts(database: Database, n: int = 100, min_time: int = 0, 
     let payment_count = LENGTH(payment_groups)
     sort payment_count desc
     limit {n}
-    return {{from: from, to: to, payment_count: payment_count}}"""
+    return {{from: last(split(from,'/')), to: last(split(to,'/')), payment_count: payment_count}}"""
     counts = database.fetch_list(aql)
     return counts
 
@@ -136,3 +127,58 @@ def get_graph_from_top_payers(database: Database, n: int = 100, min_time: int = 
             node_addresses.append(to_address)
     return nodes, edges
 
+
+def get_outbound_witnesses_for_hotspot(database: Database, address: str):
+    aql = f"""for hotspot in hotspots
+    filter hotspot.address == '{address}'
+    for v, e, p in 1..1 outbound hotspot witnesses
+        return{{witness: p.vertices[1]}}"""
+    return [witness['witness'] for witness in database.fetch_list(aql)]
+
+
+def get_inbound_witnesses_for_hotspot(database: Database, address: str):
+    aql = f"""for hotspot in hotspots
+    filter hotspot.address == '{address}'
+    for v, e, p in 1..1 inbound hotspot witnesses
+        return{{witness: p.vertices[0]}}"""
+    return [witness['witness'] for witness in database.fetch_list(aql)]
+
+
+def get_witness_graph_near_coordinates(database: Database, lat: float, lon: float, limit: int = 10):
+    aql = f"""LET queryCoords = GEO_POINT({lon}, {lat})
+    FOR hotspot IN hotspots
+        SORT GEO_DISTANCE(queryCoords, hotspot.geo_location)
+        LIMIT {limit}
+        for v, e, p in 1..1 outbound hotspot witnesses
+            sort e._from
+            let distance_m = GEO_DISTANCE(p.vertices[0].geo_location, p.vertices[1].geo_location)
+            RETURN {{from: last(split(e._from, '/')), to: last(split(e._to, '/')), snr: e.snr, rssi: e.signal, distance_m: distance_m}}"""
+    edges = database.fetch_list(aql)
+    address_list, nodes = [], []
+    vertex_list = [list(edge.values())[:2] for edge in edges]
+    for v_pair in vertex_list:
+        for v in v_pair:
+            if v not in address_list:
+                nodes.append(database['hotspots'][v].getStore())
+                address_list += v
+    return nodes, edges
+
+
+def get_witness_graph_in_hex(database: Database, hex: str):
+    poly_list = [list(p) for p in h3.h3_to_geo_boundary(hex, geo_json=True)]
+    nodes_aql = f"""let hex_poly = GEO_POLYGON({poly_list})
+    for hotspot in hotspots
+    filter GEO_CONTAINS(hex_poly, hotspot.geo_location)
+    return {{hotspot}}
+    """
+    nodes = [hotspot['hotspot'] for hotspot in database.fetch_list(nodes_aql)]
+    node_addresses = [node['address'] for node in nodes]
+    edges_aql = f"""let hex_poly = GEO_POLYGON({poly_list})
+        for hotspot in hotspots
+        filter hotspot.address in {node_addresses}
+        for v, e, p in 1..1 outbound hotspot witnesses
+            filter GEO_CONTAINS(hex_poly, p.vertices[1].geo_location)
+            let distance_m = GEO_DISTANCE(p.vertices[0].geo_location, p.vertices[1].geo_location)
+            RETURN {{from: last(split(e._from, '/')), to: last(split(e._to, '/')), snr: e.snr, rssi: e.signal, distance_m: distance_m}}"""
+    edges = database.fetch_list(edges_aql)
+    return nodes, edges

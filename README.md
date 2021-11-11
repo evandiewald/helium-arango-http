@@ -1,17 +1,38 @@
 # helium-arango-http
-A RESTful API providing routes for blockchain data stored in a native graph database.
+![build image](https://github.com/evandiewald/helium-arango-http/actions/workflows/docker-image.yml/badge.svg)
+![publish image](https://github.com/evandiewald/helium-arango-http/actions/workflows/docker-publish.yml/badge.svg)
 
-## Getting Started
-Make a copy of the `.env.template` file called `.env` and provide the necessary environment variables.
+A RESTful API providing routes for blockchain data stored in a native graph database, which is populated by [`helium-arango-etl`](https://github.com/evandiewald/helium-arango-etl).
 
-Start the FastAPI server with:
+## About
+Helium's Blockchain API is an effective way to view historical data stored on-chain, but the ledger-based format is less useful for feeding directly into network models. In this project, we propose to build a framework for a graph-based representation of blockchain activity, including Proof of Coverage and Token Flow. By capturing the natural adjacency between hotspots and accounts, we will be able to build machine learning models to, for instance, identify likely "gaming" behavior and predict coverage maps based on hotspot placement. 
 
-`$ uvicorn server:app --host 0.0.0.0 --port 80`
+[More details in the full project proposal](https://github.com/dewi-alliance/grants/issues/23).
 
-## Documentation
-Swagger documentation for each route is provided at the `/docs` endpoint.
+## Dependencies
+To run helium-arango-http, you will need:
+- Read/write access to a running [ArangoDB instance](https://www.arangodb.com/download-major/docker/).
+  - e.g. `docker run -p 8529:8529 -e ARANGO_ROOT_PASSWORD=openSesame arangodb/arangodb:3.8.2`
+  - If running locally, you can view the Arango WebUI at [`http://localhost:8529/`](http://localhost:8529/)
 
-## Related Projects
-[`helium-arango-etl`](https://github.com/evandiewald/helium-arango-etl): an ETL service that transforms relational blockchain data into a native graph format.
+## Quick setup
+1. Make a copy of `.env.template` called `.env` and include the Arango URL and credentials.
+2. Build the docker image with:
 
-[`helium-arango-tools`](https://github.com/evandiewald/helium-arango-tools): (coming soon)
+   `docker build -t helium-arango-http:latest .`
+3. Run the container with:
+
+    `docker run -d --name api -p 8000:8000 helium-arango-http`
+4. View the Swagger documentation at `http://{domain}:8000/docs` (full API reference coming)
+
+## Related Works
+
+- [`Exploring the Helium Network with Graph Theory`](https://towardsdatascience.com/exploring-the-helium-network-with-graph-theory-66cbb8bffff9): Blog post inspiring much of this work.
+- [`evandiewald/helium-arango-etl`](https://github.com/evandiewald/helium-arango-etl): ETL service that converts relational blockchain data into a native graph format for storage in [ArangoDB](https://www.arangodb.com/).
+- [`evandiewald/helium-arango-analysis`](https://github.com/evandiewald/helium-arango-analysis): (coming soon) methods and models for running Graph Theory- and Graph Neural Network-based analyses of the Arango graphs using Python-friendly formats, such as networkx and torch-geometric.
+
+## Contributing
+Pull requests are welcome, especially when it comes to adding additional interesting queries. The focus of this project is to leverage the native graph format of ArangoDB to run analyses that are *not already covered by the [Blockchain API](https://docs.helium.com/api)*, such as token flow and coverage mapping. If you are not familiar with ArangoDB, the [AQL query language](https://www.arangodb.com/docs/stable/aql/) allows for powerful extraction of *adjacencies* in the dataset. Build AQL queries in `api/arango_queries.py` and add routes to the FastAPI server in `api/server.py`.
+
+## Acknowledgements
+This project is supported by a grant from the [Decentralized Wireless Alliance](https://dewi.org).
