@@ -12,6 +12,10 @@ def test_routes():
     response = client.get(f'/payments/{TEST_ACCOUNT}/from')
     assert response.status_code == 200
 
+    response = client.get(f'/payments/{TEST_ACCOUNT}/from', params={'min_time': 100, 'max_time': 110})
+    assert response.status_code == 200
+    assert response.json() == {'Message': 'No results returned for query'}
+
     response = client.get(f'/payments/{TEST_ACCOUNT}/to')
     assert response.status_code == 200
 
@@ -64,7 +68,8 @@ def test_routes():
         raise AssertionError
 
     response = client.get(f'/hotspots/hex/graph', params={'hex': 'not a hex!'})
-    assert response.status_code == 400
+    assert response.status_code == 200
+    assert response.json() == {'Message': 'Invalid hex'}
 
     response = client.get(f'/hotspots/{TEST_HOTSPOT}/outbound')
     assert response.status_code == 200
