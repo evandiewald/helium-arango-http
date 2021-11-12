@@ -12,9 +12,8 @@ Helium's Blockchain API is an effective way to view historical data stored on-ch
 
 ## Dependencies
 To run helium-arango-http, you will need:
-- Read/write access to a running [ArangoDB instance](https://www.arangodb.com/download-major/docker/).
-  - e.g. `docker run -p 8529:8529 -e ARANGO_ROOT_PASSWORD=openSesame arangodb/arangodb:3.8.2`
-  - If running locally, you can view the Arango WebUI at [`http://localhost:8529/`](http://localhost:8529/)
+- Read/write access to a running [ArangoDB instance](https://www.arangodb.com/download-major/docker/) **that has been configured and populated by the [helium-arango-etl](https://github.com/evandiewald/helium-arango-etl) service**
+  - If running locally, you can view the Arango WebUI at [`http://localhost:8529/`](http://localhost:8529/).
 
 ## Quick setup
 1. Make a copy of `.env.template` called `.env` and include the Arango URL and credentials.
@@ -26,7 +25,7 @@ To run helium-arango-http, you will need:
     `docker run -d --name api -p 8000:8000 helium-arango-http`
 4. View the Swagger documentation at `http://{domain}:8000/docs` (full API reference coming)
 
-## Related Works
+## Related Work
 
 - [`Exploring the Helium Network with Graph Theory`](https://towardsdatascience.com/exploring-the-helium-network-with-graph-theory-66cbb8bffff9): Blog post inspiring much of this work.
 - [`evandiewald/helium-arango-etl`](https://github.com/evandiewald/helium-arango-etl): ETL service that converts relational blockchain data into a native graph format for storage in [ArangoDB](https://www.arangodb.com/).

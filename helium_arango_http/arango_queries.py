@@ -3,6 +3,15 @@ import h3
 
 
 def get_top_payment_totals(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    """
+    Get top payments (payer, payee) pair, sorted by total HNT paid.
+
+    :param database: The pyArango Database instance.
+    :param limit: The max number of payment pairs to return.
+    :param min_time: The minimum UTC timestamp to consider.
+    :param max_time: The maximum UTC timestamp to consider.
+    :return: The list of top payment pairs (payer -> payee) by amount paid.
+    """
     aql = f"""for payment in payments
     filter payment.time > {min_time} and payment.time < {max_time}
     collect from = payment._from, to = payment._to into payment_groups = payment.amount
@@ -15,6 +24,15 @@ def get_top_payment_totals(database: Database, n: int = 100, min_time: int = 0, 
 
 
 def get_top_payment_counts(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    """
+    Get top payments (payer, payee) pair, sorted by number of payments.
+
+    :param database: The pyArango Database instance.
+    :param n: The max number of payment pairs to return.
+    :param min_time: The minimum UTC timestamp to consider.
+    :param max_time: The maximum UTC timestamp to consider.
+    :return: The list of top payment pairs (payer -> payee) by number of payments.
+    """
     aql = f"""for payment in payments
     filter payment.time > {min_time} and payment.time < {max_time}
     collect from = payment._from, to = payment._to into payment_groups = payment.amount
@@ -27,6 +45,15 @@ def get_top_payment_counts(database: Database, n: int = 100, min_time: int = 0, 
 
 
 def get_top_payers(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    """
+    Get top payers, sorted by amount paid. Also includes payment counts for each.
+
+    :param database: The pyArango Database instance.
+    :param n: The max number of payees to return.
+    :param min_time: The minimum UTC timestamp to consider.
+    :param max_time: The maximum UTC timestamp to consider.
+    :return: The list of top payment pairs (payer -> payee) by number of payments.
+    """
     aql = f"""for payment in payments
     filter payment.time > {min_time} and payment.time < {max_time}
     collect from = payment._from into payment_groups = payment.amount
@@ -40,6 +67,15 @@ def get_top_payers(database: Database, n: int = 100, min_time: int = 0, max_time
 
 
 def get_top_payees(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    """
+    Get top payees, sorted by amount paid. Also includes payment counts for each.
+
+    :param database: The pyArango Database instance.
+    :param n: The max number of payers to return.
+    :param min_time: The minimum UTC timestamp to consider.
+    :param max_time: The maximum UTC timestamp to consider.
+    :return: The list of top payment pairs (payer -> payee) by number of payments.
+    """
     aql = f"""for payment in payments
     filter payment.time > {min_time} and payment.time < {max_time}
     collect to = payment._to into payment_groups = payment.amount
@@ -53,6 +89,16 @@ def get_top_payees(database: Database, n: int = 100, min_time: int = 0, max_time
 
 
 def get_top_payers_to_payee(database: Database, address: str, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    """
+    Get payments to an account, grouped by payer and sorted by amount. Also includes payment counts for each.
+
+    :param database: The pyArango Database instance.
+    :param address: The HNT wallet address of the payer.
+    :param n: The max number of payers to return.
+    :param min_time: The minimum UTC timestamp to consider.
+    :param max_time: The maximum UTC timestamp to consider.
+    :return: The list of top payees from this account, including amount paid and number of payments.
+    """
     aql = f"""for payment in payments
     filter payment.time > {min_time} and payment.time < {max_time} and payment._to == 'accounts/{address}'
     collect from = payment._from into payment_groups = payment.amount
@@ -66,6 +112,16 @@ def get_top_payers_to_payee(database: Database, address: str, n: int = 100, min_
 
 
 def get_top_payees_from_payer(database: Database, address: str, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    """
+    Get payments from an account, grouped by payee and sorted by amount. Also includes payment counts for each.
+
+    :param database: The pyArango Database instance.
+    :param address: The HNT wallet address of the payee.
+    :param n: The max number of payers to return.
+    :param min_time: The minimum UTC timestamp to consider.
+    :param max_time: The maximum UTC timestamp to consider.
+    :return: The list of top payers to this account, including amount paid and number of payments.
+    """
     aql = f"""for payment in payments
     filter payment.time > {min_time} and payment.time < {max_time} and payment._from == 'accounts/{address}'
     collect to = payment._to into payment_groups = payment.amount
@@ -79,6 +135,15 @@ def get_top_payees_from_payer(database: Database, address: str, n: int = 100, mi
 
 
 def get_graph_to_top_payees(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    """
+    Starting with the top payees, generate the graph of token flow from these accounts.
+
+    :param database: The pyArango Database instance.
+    :param n: The max number of top payees to seed the graph.
+    :param min_time: The minimum UTC timestamp to consider.
+    :param max_time: The maximum UTC timestamp to consider.
+    :return: (nodes, edges) lists of the graph.
+    """
     top_accounts = get_top_payees(database, n, min_time, max_time)
     node_addresses = []
     nodes = []
@@ -104,6 +169,15 @@ def get_graph_to_top_payees(database: Database, n: int = 100, min_time: int = 0,
 
 
 def get_graph_from_top_payers(database: Database, n: int = 100, min_time: int = 0, max_time: int = int(datetime.utcnow().timestamp())):
+    """
+    Starting with the top payers, generate the graph of token flow from these accounts.
+
+    :param database: The pyArango Database instance.
+    :param n: The max number of top payers to seed the graph.
+    :param min_time: The minimum UTC timestamp to consider.
+    :param max_time: The maximum UTC timestamp to consider.
+    :return: (nodes, edges) lists of the graph.
+    """
     top_accounts = get_top_payers(database, n, min_time, max_time)
     node_addresses = []
     nodes = []
@@ -129,7 +203,15 @@ def get_graph_from_top_payers(database: Database, n: int = 100, min_time: int = 
 
 
 def get_outbound_witnesses_for_hotspot(database: Database, address: str):
-    aql = f"""for hotspot in hotspots
+    """
+    Get the list of hotspots that have recently witnessed a challenge from this hotspot.
+
+    :param database: The pyArango Database instance.
+    :param address: The hotspot address.
+    :return: The list of witnesses.
+    """
+    aql = f"""
+    for hotspot in hotspots
     filter hotspot.address == '{address}'
     for v, e, p in 1..1 outbound hotspot witnesses
         return{{witness: p.vertices[1]}}"""
@@ -137,6 +219,13 @@ def get_outbound_witnesses_for_hotspot(database: Database, address: str):
 
 
 def get_inbound_witnesses_for_hotspot(database: Database, address: str):
+    """
+    Get the list of hotspots that this hotspot has recently witnessed.
+
+    :param database: The pyArango Database instance.
+    :param address: The hotspot address.
+    :return: The list of challengees.
+    """
     aql = f"""for hotspot in hotspots
     filter hotspot.address == '{address}'
     for v, e, p in 1..1 inbound hotspot witnesses
@@ -145,6 +234,15 @@ def get_inbound_witnesses_for_hotspot(database: Database, address: str):
 
 
 def get_witness_graph_near_coordinates(database: Database, lat: float, lon: float, limit: int = 10):
+    """
+    Starting with the closest hotspots to a given coordinate, generate the recent witness graph, including signal details.
+
+    :param database: The pyArango Database instance.
+    :param lat: The latitude of the query coordinate.
+    :param lon: The longitude of the query coordinate.
+    :param limit: The max number of nearby hotspots to seed the graph. Note that the nodes list will also include any witnesses.
+    :return: (nodes, edges) lists of the graph.
+    """
     aql = f"""LET queryCoords = GEO_POINT({lon}, {lat})
     FOR hotspot IN hotspots
         SORT GEO_DISTANCE(queryCoords, hotspot.geo_location)
@@ -165,6 +263,13 @@ def get_witness_graph_near_coordinates(database: Database, lat: float, lon: floa
 
 
 def get_witness_graph_in_hex(database: Database, hex: str):
+    """
+    Generate the witness graph within a hex.
+
+    :param database: The pyArango Database instance.
+    :param hex: An h3 hex to consider.
+    :return: (nodes, edges) lists of the graph.
+    """
     poly_list = [list(p) for p in h3.h3_to_geo_boundary(hex, geo_json=True)]
     nodes_aql = f"""let hex_poly = GEO_POLYGON({poly_list})
     for hotspot in hotspots
@@ -182,3 +287,30 @@ def get_witness_graph_in_hex(database: Database, hex: str):
             RETURN {{from: last(split(e._from, '/')), to: last(split(e._to, '/')), snr: e.snr, rssi: e.signal, distance_m: distance_m}}"""
     edges = database.fetch_list(edges_aql)
     return nodes, edges
+
+
+def get_sample_of_recent_witness_receipts(database: Database, address: str = None, limit: int = 1000):
+    """
+    Get sample of recent witness receipts. If no address is specified, will return receipts from the network overall.
+
+    :param database: The pyArango Database instance.
+    :param address: (optional) if specified, results will only include receipts in which this hotspot was a witness.
+    :param limit: The maximum number of results to return.
+    :return: The list of receipts.
+    """
+    if not address:
+        aql = f"""
+        for witness in witnesses
+        sort witness.time desc
+        limit {limit}
+        return {{receipt: witness}}
+        """
+    else:
+        aql = f"""
+        for witness in witnesses
+        filter witness.gateway == '{address}'
+        sort witness.time desc
+        limit {limit}
+        return {{receipt: witness}}
+        """
+    return [receipt['receipt'] for receipt in database.fetch_list(aql)]

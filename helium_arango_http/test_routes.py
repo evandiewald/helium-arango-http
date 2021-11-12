@@ -72,6 +72,12 @@ def test_routes():
     response = client.get(f'/hotspots/{TEST_HOTSPOT}/inbound')
     assert response.status_code == 200
 
+    response = client.get(f'/hotspots/receipts', params={'limit': 50})
+    assert response.status_code == 200
+
+    response = client.get(f'/hotspots/receipts', params={'address': TEST_HOTSPOT, 'limit': 50})
+    assert response.status_code == 200
+
 
 
 
