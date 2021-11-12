@@ -72,7 +72,7 @@ async def top_payers_graph(limit: Optional[int] = 10, min_time: Optional[int] = 
 
 @app.get('/payments/payees/graph', response_class=JSONResponse, tags=['payments'])
 async def top_payees_graph(limit: Optional[int] = 10, min_time: Optional[int] = 0, max_time: Optional[int] = int(datetime.utcnow().timestamp())):
-    nodes, edges = get_graph_from_top_payers(db, limit, min_time, max_time)
+    nodes, edges = get_graph_to_top_payees(db, limit, min_time, max_time)
     return {'nodes': nodes, 'edges': edges}
 
 

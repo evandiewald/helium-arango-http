@@ -18,7 +18,7 @@ def get_top_payment_totals(database: Database, n: int = 100, min_time: int = 0, 
     let payment_total = SUM(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{from: last(split(from,'/')), to: last(split(to,'/')), payment_total: payment_total}}"""
+    return {{_from: last(split(from,'/')), _to: last(split(to,'/')), payment_total: payment_total}}"""
     totals = database.fetch_list(aql)
     return totals
 
@@ -39,7 +39,7 @@ def get_top_payment_counts(database: Database, n: int = 100, min_time: int = 0, 
     let payment_count = LENGTH(payment_groups)
     sort payment_count desc
     limit {n}
-    return {{from: last(split(from,'/')), to: last(split(to,'/')), payment_count: payment_count}}"""
+    return {{_from: last(split(from,'/')), _to: last(split(to,'/')), payment_count: payment_count}}"""
     counts = database.fetch_list(aql)
     return counts
 
@@ -61,7 +61,7 @@ def get_top_payers(database: Database, n: int = 100, min_time: int = 0, max_time
     let payment_count = LENGTH(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    return {{_from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
     totals = database.fetch_list(aql)
     return totals
 
@@ -83,7 +83,7 @@ def get_top_payees(database: Database, n: int = 100, min_time: int = 0, max_time
     let payment_count = SUM(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{to: last(split(to,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    return {{_to: last(split(to,'/')), total_amount: payment_total, num_payments: payment_count}}"""
     totals = database.fetch_list(aql)
     return totals
 
@@ -106,7 +106,7 @@ def get_top_payers_to_payee(database: Database, address: str, n: int = 100, min_
     let payment_count = LENGTH(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    return {{_from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
     totals = database.fetch_list(aql)
     return totals
 
@@ -129,7 +129,7 @@ def get_top_payees_from_payer(database: Database, address: str, n: int = 100, mi
     let payment_count = LENGTH(payment_groups)
     sort payment_total desc
     limit {n}
-    return {{to: last(split(to,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+    return {{_to: last(split(to,'/')), total_amount: payment_total, num_payments: payment_count}}"""
     totals = database.fetch_list(aql)
     return totals
 
@@ -148,7 +148,7 @@ def get_graph_to_top_payees(database: Database, n: int = 100, min_time: int = 0,
     node_addresses = []
     nodes = []
     for node in top_accounts:
-        address = node['to']
+        address = node['_to']
         node_addresses.append(address)
         nodes.append(database['accounts'][address].getStore())
     aql = f"""for account in accounts
@@ -158,10 +158,10 @@ def get_graph_to_top_payees(database: Database, n: int = 100, min_time: int = 0,
         let payment_total = sum(edge_groups)
         let payment_count = length(edge_groups)
         sort payment_total desc
-        return {{to: last(split(to,'/')), from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+        return {{_to: last(split(to,'/')), _from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
     edges = database.fetch_list(aql)
     for edge in edges:
-        from_address = edge['from']
+        from_address = edge['_from']
         if from_address not in node_addresses:
             nodes.append(database['accounts'][from_address].getStore())
             node_addresses.append(from_address)
@@ -182,7 +182,7 @@ def get_graph_from_top_payers(database: Database, n: int = 100, min_time: int = 
     node_addresses = []
     nodes = []
     for node in top_accounts:
-        address = node['from']
+        address = node['_from']
         node_addresses.append(address)
         nodes.append(database['accounts'][address].getStore())
     aql = f"""for account in accounts
@@ -192,10 +192,10 @@ def get_graph_from_top_payers(database: Database, n: int = 100, min_time: int = 
         let payment_total = sum(edge_groups)
         let payment_count = length(edge_groups)
         sort payment_total desc
-        return {{to: last(split(to,'/')), from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
+        return {{_to: last(split(to,'/')), _from: last(split(from,'/')), total_amount: payment_total, num_payments: payment_count}}"""
     edges = database.fetch_list(aql)
     for edge in edges:
-        to_address = edge['to']
+        to_address = edge['_to']
         if to_address not in node_addresses:
             nodes.append(database['accounts'][to_address].getStore())
             node_addresses.append(to_address)
@@ -250,7 +250,7 @@ def get_witness_graph_near_coordinates(database: Database, lat: float, lon: floa
         for v, e, p in 1..1 outbound hotspot witnesses
             sort e._from
             let distance_m = GEO_DISTANCE(p.vertices[0].geo_location, p.vertices[1].geo_location)
-            RETURN {{from: last(split(e._from, '/')), to: last(split(e._to, '/')), snr: e.snr, rssi: e.signal, distance_m: distance_m}}"""
+            RETURN {{_from: last(split(e._from, '/')), _to: last(split(e._to, '/')), snr: e.snr, rssi: e.signal, distance_m: distance_m}}"""
     edges = database.fetch_list(aql)
     address_list, nodes = [], []
     vertex_list = [list(edge.values())[:2] for edge in edges]
@@ -284,7 +284,7 @@ def get_witness_graph_in_hex(database: Database, hex: str):
         for v, e, p in 1..1 outbound hotspot witnesses
             filter GEO_CONTAINS(hex_poly, p.vertices[1].geo_location)
             let distance_m = GEO_DISTANCE(p.vertices[0].geo_location, p.vertices[1].geo_location)
-            RETURN {{from: last(split(e._from, '/')), to: last(split(e._to, '/')), snr: e.snr, rssi: e.signal, distance_m: distance_m}}"""
+            RETURN {{_from: last(split(e._from, '/')), _to: last(split(e._to, '/')), snr: e.snr, rssi: e.signal, distance_m: distance_m}}"""
     edges = database.fetch_list(edges_aql)
     return nodes, edges
 
