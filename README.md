@@ -17,12 +17,9 @@ To run helium-arango-http, you will need:
 
 ## Quick setup
 1. Make a copy of `.env.template` called `.env` and include the Arango URL and credentials.
-2. Build the docker image with:
+2. Build/run the app with `docker-compose` (the API runs alongside a redis cache):
 
-   `docker build -t helium-arango-http:latest .`
-3. Run the container with:
-
-    `docker run -d --name api -p 8000:8000 helium-arango-http`
+   `docker-compose up -d`
 4. View the Swagger documentation at `http://{domain}:8000/docs` (full API reference coming)
 
 ## Related Work

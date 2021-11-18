@@ -1,6 +1,7 @@
 import pyArango.theExceptions
-
+import redis
 from arango_queries import *
+from utils import get_cluster_centers
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pyArango.connection import Connection
@@ -11,6 +12,7 @@ import uvicorn
 import h3
 from datetime import datetime
 from metadata import title, description, version, license_info, contact, tags_metadata
+import pickle
 
 
 load_dotenv()
@@ -24,6 +26,9 @@ try:
 except requests.exceptions.ConnectionError:
     raise Exception('Unable to connect to the ArangoDB instance. Please check that it is running and that you have supplied the correct URL/credentials in the .env file.')
 db = conn['helium']
+
+# start the redis cache
+r = redis.Redis('redis')
 
 # fields from metadata.py
 app = FastAPI(
@@ -140,6 +145,23 @@ async def witness_receipts(address: Optional[str] = None, limit: Optional[int] =
         return {'receipts': get_sample_of_recent_witness_receipts(db, address, limit)}
     except pyArango.theExceptions.AQLFetchError:
         return JSONResponse({'Message': 'No results returned for query'})
+
+
+@app.get('/hotspots/clusters', response_class=JSONResponse, tags=['hotspots'])
+async def cluster_centers(n_clusters: Optional[str] = 500):
+    centroid_key = f'centroids_{n_clusters}'
+    if r.exists(centroid_key):
+        (centroids, error) = pickle.loads(r.get(centroid_key))
+    else:
+        if r.exists('hotspot_coordinates'):
+            coords = pickle.loads(r.get('hotspot_coordinates'))
+        else:
+            coords = get_hotspot_coordinates(db)
+            r.set('hotspot_coordinates', pickle.dumps(coords))
+        (centroids, error) = get_cluster_centers(coords, int(n_clusters))
+        r.set(centroid_key, pickle.dumps((centroids, error)))
+    return {'centroids': centroids, 'error': error}
+
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)

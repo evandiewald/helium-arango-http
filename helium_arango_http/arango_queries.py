@@ -289,7 +289,7 @@ def get_witness_graph_in_hex(database: Database, hex: str):
     return nodes, edges
 
 
-def get_sample_of_recent_witness_receipts(database: Database, address: str = None, limit: int = 1000):
+def get_sample_of_recent_witness_receipts(database: Database, address: str = None, limit: int = 1000) -> list:
     """
     Get sample of recent witness receipts. If no address is specified, will return receipts from the network overall.
 
@@ -314,3 +314,15 @@ def get_sample_of_recent_witness_receipts(database: Database, address: str = Non
         return {{receipt: witness}}
         """
     return [receipt['receipt'] for receipt in database.fetch_list(aql)]
+
+
+def get_hotspot_coordinates(database: Database) -> list:
+    """
+    Get list of coordinate pairs of all hotspots. Useful for clustering.
+    :param database: The pyArango Database instance.
+    :return: The list of [lon, lat] coordinate pairs.
+    """
+    aql = """for hotspot in hotspots
+    filter hotspot.geo_location.coordinates != null
+    return hotspot.geo_location.coordinates"""
+    return database.fetch_list(aql)
