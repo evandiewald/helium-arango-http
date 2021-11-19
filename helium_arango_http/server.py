@@ -29,7 +29,9 @@ db = conn['helium']
 
 # start the redis cache
 REDIS_EXPIRATION_SECONDS = 360
-r = redis.Redis('redis')
+
+if os.getenv('REDIS_ACTIVE'):
+    r = redis.Redis('redis')
 
 # fields from metadata.py
 app = FastAPI(
@@ -150,17 +152,21 @@ async def witness_receipts(address: Optional[str] = None, limit: Optional[int] =
 
 @app.get('/hotspots/clusters', response_class=JSONResponse, tags=['hotspots'])
 async def cluster_centers(n_clusters: Optional[str] = 500):
-    centroid_key = f'centroids_{n_clusters}'
-    if r.exists(centroid_key):
-        (centroids, error) = pickle.loads(r.get(centroid_key))
-    else:
-        if r.exists('hotspot_coordinates'):
-            coords = pickle.loads(r.get('hotspot_coordinates'))
+    if os.getenv('REDIS_ACTIVE'):
+        centroid_key = f'centroids_{n_clusters}'
+        if r.exists(centroid_key):
+            (centroids, error) = pickle.loads(r.get(centroid_key))
         else:
-            coords = get_hotspot_coordinates(db)
-            r.set('hotspot_coordinates', pickle.dumps(coords), ex=REDIS_EXPIRATION_SECONDS)
+            if r.exists('hotspot_coordinates'):
+                coords = pickle.loads(r.get('hotspot_coordinates'))
+            else:
+                coords = get_hotspot_coordinates(db)
+                r.set('hotspot_coordinates', pickle.dumps(coords), ex=REDIS_EXPIRATION_SECONDS)
+            (centroids, error) = get_cluster_centers(coords, int(n_clusters))
+            r.set(centroid_key, pickle.dumps((centroids, error)), ex=REDIS_EXPIRATION_SECONDS)
+    else:
+        coords = get_hotspot_coordinates(db)
         (centroids, error) = get_cluster_centers(coords, int(n_clusters))
-        r.set(centroid_key, pickle.dumps((centroids, error)), ex=REDIS_EXPIRATION_SECONDS)
     return {'centroids': centroids, 'error': error}
 
 
