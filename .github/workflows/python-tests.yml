@@ -36,5 +36,6 @@ jobs:
           ARANGO_URL: ${{ secrets.ARANGO_URL }}
           ARANGO_USERNAME: ${{ secrets.ARANGO_USERNAME }}
           ARANGO_PASSWORD: ${{ secrets.ARANGO_PASSWORD }}
+          REDIS_ACTIVE: False
       run: |
         pytest
