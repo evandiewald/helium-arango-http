@@ -28,6 +28,7 @@ except requests.exceptions.ConnectionError:
 db = conn['helium']
 
 # start the redis cache
+REDIS_EXPIRATION_SECONDS = 360
 r = redis.Redis('redis')
 
 # fields from metadata.py
@@ -157,9 +158,9 @@ async def cluster_centers(n_clusters: Optional[str] = 500):
             coords = pickle.loads(r.get('hotspot_coordinates'))
         else:
             coords = get_hotspot_coordinates(db)
-            r.set('hotspot_coordinates', pickle.dumps(coords))
+            r.set('hotspot_coordinates', pickle.dumps(coords), ex=REDIS_EXPIRATION_SECONDS)
         (centroids, error) = get_cluster_centers(coords, int(n_clusters))
-        r.set(centroid_key, pickle.dumps((centroids, error)))
+        r.set(centroid_key, pickle.dumps((centroids, error)), ex=REDIS_EXPIRATION_SECONDS)
     return {'centroids': centroids, 'error': error}
 
 
